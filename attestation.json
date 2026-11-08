@@ -1,9 +1,9 @@
 {
   "pluginId": "neodex.pendu",
   "repo": "NDesumeur/neodex-plugin-pendu",
-  "version": "1.1.1",
-  "sha256": "bec50cd1ae48f1587e5996b0bea09c931b9c6e5cf2a8bf9dd6c1f3824b8b39b0",
-  "approvedAt": "2026-11-06T21:35:48.017Z",
+  "version": "1.1.2",
+  "sha256": "97809b1ca57933c6f49cb9a19e442cf75bcaeca1f3b9d6225174c86551cb5c81",
+  "approvedAt": "2026-11-08T12:10:49.579Z",
   "neobase": ">=4.0.0",
-  "signature": "u3PJ6zQO/1V5wqLiYzZaZy9Ng8ayAfx1H3cZd7j8vDXDWKpRCrC0EJW6txPREjET4VYdXurOpgpBnhP5ZafQCQ=="
+  "signature": "tVYHQDPJmmynVx1M8XeU8Xt9zJZUVcZYgSO1k6ZjmqSgI+HgZm1mtm3jssqc2emaoN8SNWcxCmN3Lwbi0gRJAg=="
 }
