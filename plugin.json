@@ -1,7 +1,7 @@
 {
   "id": "neodex.pendu",
   "name": "Pendu",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "author": "NDesumeur",
   "description": "Le jeu du pendu avec des mots français : 17 thèmes ou tous mélangés, lettres au clic ou au clavier, accents ignorés (E trouve aussi É, È, Ê). Quatre niveaux, de 10 erreurs avec la première et la dernière lettre données jusqu'à 4 erreurs sur des mots longs ; indice contre une erreur, mot dévoilé en cas d'échec, séries de victoires gardées.",
   "icon": "icon.png",
