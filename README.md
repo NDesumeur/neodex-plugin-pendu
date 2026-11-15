@@ -13,6 +13,12 @@ Le jeu du pendu avec des mots français classés par thème : devine le mot lett
 
 Le thème du mot et le nombre d'erreurs sont affichés. Si tu perds, le mot est dévoilé avec son orthographe exacte.
 
+## L'écran de jeu
+
+Tout le jeu est dessiné en pixel art : la potence sous la lune, le mot en cases (les lettres trouvées s'affichent en rose), une case rouge par erreur en haut à droite, et un clavier dessiné où les lettres justes passent au vert et les fausses sont barrées en rouge. Une erreur fait clignoter la potence.
+
+Le jeu prend toute la place que laisse la fenêtre ; le bouton **Plein écran** l'agrandit à tout l'écran (Échap pour en sortir).
+
 ## Niveaux
 
 - **Facile** : 10 erreurs permises, des mots de 4 à 8 lettres, avec la première et la dernière lettre données.

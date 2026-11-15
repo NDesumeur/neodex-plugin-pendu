@@ -13,6 +13,12 @@ Hangman with French words sorted by theme: guess the word letter by letter befor
 
 The word's theme and the number of mistakes are shown. If you lose, the word is revealed with its exact spelling.
 
+## The game screen
+
+The whole game is drawn in pixel art: the gallows under the moon, the word in boxes (found letters show in pink), one red box per mistake at the top right, and a drawn keyboard where right letters turn green and wrong ones are crossed out in red. A mistake makes the gallows flash.
+
+The game takes all the room the window leaves; the **Full screen** button fills the whole screen with it (Escape to leave).
+
 ## Levels
 
 - **Easy**: 10 mistakes allowed, words of 4 to 8 letters, with the first and last letters given.

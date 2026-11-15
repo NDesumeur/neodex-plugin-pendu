@@ -1,26 +1,12 @@
 // Pendu : ton appli d'origine (HTML et code inchangés), livrée en plugin.
 // Ses données sont dans le dossier du plugin, que NeoDex sauvegarde (synchro cloud et sauvegardes) ; à la première ouverture elle reprend ce que tu avais dans NeoDex.
 // Elle tourne dans le bac à sable de NeoDex, avec ses outils d'interface (ctx.host) et seulement les autorisations de son plugin.json.
-const HTML = "<div class=\"appWrap\">\n      <div class=\"agHead\"><span class=\"label\">Pendu</span><span class=\"hint\" id=\"hgInfo\"></span><div class=\"agNav\"><select class=\"f gSel\" id=\"hgTheme\"></select><select class=\"f gSel\" id=\"hgLevel\"><option value=\"facile\">Facile · 10 erreurs</option><option value=\"normal\" selected>Normal · 8 erreurs</option><option value=\"difficile\">Difficile · 6 erreurs</option><option value=\"expert\">Expert · 4 erreurs</option></select><button class=\"btn px\" id=\"hgHint\">INDICE (1 ERREUR)</button><button class=\"btn px\" id=\"hgNew\">NOUVEAU MOT</button></div></div>\n      <div class=\"sysCard px hgMain\"><canvas id=\"hgCanvas\" width=\"64\" height=\"64\"></canvas><div class=\"hgSide\"><div id=\"hgWord\"></div><span class=\"hint\" id=\"hgThemeName\"></span><span class=\"label\" id=\"hgLives\"></span><div id=\"hgMsg\" class=\"hgMsg\"></div></div></div>\n      <div id=\"hgKeys\"></div>\n      <div class=\"hint\">Clique les lettres ou tape-les au clavier (Entrée : mot suivant). Les accents ne comptent pas : E trouve aussi É, È et Ê.</div>\n    </div>";
+const HTML = "<div class=\"appWrap\">\n      <div class=\"agHead\"><span class=\"label\">Pendu</span><span class=\"hint\" id=\"hgInfo\"></span><div class=\"agNav\"><select class=\"f gSel\" id=\"hgTheme\"></select><select class=\"f gSel\" id=\"hgLevel\"><option value=\"facile\">Facile · 10 erreurs</option><option value=\"normal\" selected>Normal · 8 erreurs</option><option value=\"difficile\">Difficile · 6 erreurs</option><option value=\"expert\">Expert · 4 erreurs</option></select><button class=\"btn px\" id=\"hgHint\">INDICE (1 ERREUR)</button><button class=\"btn px\" id=\"hgNew\">NOUVEAU MOT</button><button class=\"btn px\" id=\"hgFs\">PLEIN ÉCRAN</button></div></div>\n      <div class=\"gameBox\"><canvas id=\"hgCanvas\" width=\"320\" height=\"240\" role=\"img\" aria-label=\"Pendu\"></canvas></div>\n      <div class=\"hint\">Clique les lettres ou tape-les au clavier (Entrée : mot suivant). Les accents ne comptent pas : E trouve aussi É, È et Ê.</div>\n    </div>";
 /*CSS-MOVED*/ const CSS = `.gSel{width:auto;font-size:14px;padding:6px 10px;margin-right:8px}
-.hgMain{flex-direction:row;align-items:center;gap:34px;padding:24px 28px}
-#hgCanvas{width:256px;height:256px;image-rendering:pixelated;flex:none}
-.hgSide{display:flex;flex-direction:column;gap:14px;min-width:0}
-#hgWord{display:flex;flex-wrap:wrap;gap:8px}
-#hgWord span{width:34px;height:46px;display:grid;place-items:center;font:20px var(--title);color:#fff;box-shadow:inset 0 -4px 0 var(--line2)}
-#hgWord span.on{box-shadow:inset 0 -4px 0 var(--pink)}
-#hgWord span.miss{color:var(--red)}
-#hgWord span.sep{box-shadow:none;width:16px}
-.hgMsg{font:12px var(--title);min-height:16px;color:var(--lilac);line-height:1.5}
-.hgMsg.won{color:#8ee8a0}
-.hgMsg.lost{color:var(--red)}
-#hgKeys{display:flex;flex-direction:column;align-items:center;gap:10px}
-.hgRow{display:flex;gap:10px}
-.hgKey{--fill:var(--btn);border:0;padding:0;width:54px;height:54px;font:16px var(--title);color:#fff;cursor:var(--cp,pointer)}
-.hgKey:hover:not(:disabled){--fill:var(--btnh);--c:var(--violet)}
-.hgKey.good{--fill:#1d4a34;--c:#2fbf71;color:#8ee8a0}
-.hgKey.bad{--fill:#2a0b1a;--c:#5a1f36;color:var(--red)}
-.hgKey:disabled{cursor:default}
+.gameBox{display:grid;place-items:center;padding:10px;background:#05010b;box-shadow:0 0 0 3px var(--line2)}
+.gameBox canvas{width:min(100%,max(280px,calc((100vh - 190px) * 4 / 3)));height:auto;aspect-ratio:320/240;image-rendering:pixelated;cursor:var(--cp,pointer);touch-action:none}
+.gameBox:fullscreen{padding:0;box-shadow:none}
+.gameBox:fullscreen canvas{width:min(100vw,calc(100vh * 4 / 3))}
 .nbaTeam.lost .tn{color:var(--muted)}
 `;  // le style de ce plugin (il utilise les variables du thème de NeoDex)
 export default async function (ctx) {
@@ -116,17 +102,20 @@ const hgMissing = () => [...new Set(hg.plain.replace(/[^A-Z]/g, ''))].filter(c =
 function hgGuess(c) {
   if (!hg || hg.done || hg.guessed.has(c)) return;
   hg.guessed.add(c);
-  if (!hg.plain.includes(c)) { hg.wrong++; sfx('error'); } else sfx('click');
+  if (!hg.plain.includes(c)) { hg.wrong++; sfx('error'); hg.flash = 6; const blink = () => { if (hg.flash > 0) { hg.flash--; hgDraw(); setTimeout(blink, 70); } }; setTimeout(blink, 70); } else sfx('click');
   const st = gstore('hang', {won: 0, lost: 0, streak: 0});
   if (!hgMissing().length) { hg.done = 'won'; st.won++; st.streak++; best('hangStreak', st.streak); saveGames(); sfx('notify'); }
   else if (hg.wrong >= hg.lv.max) { hg.done = 'lost'; st.lost++; st.streak = 0; saveGames(); }
   hgRender();
 }
-function hgDraw() {  // 64 x 64 pixels; the drawing advances with the share of errors used, whatever the level
-  const g = $('hgCanvas').getContext('2d'), k = Math.ceil(hg.wrong / hg.lv.max * 9 - 1e-9);
+const HG = {W: 320, H: 240, F: '8px "Press Start 2P", monospace'};
+const hgScene = document.createElement('canvas'); hgScene.width = hgScene.height = 64;
+function hgGallows() {  // 64 x 64 pixels, affichés en double ; le dessin avance avec la part des erreurs utilisées, quel que soit le niveau
+  const g = hgScene.getContext('2d'), k = Math.ceil(hg.wrong / hg.lv.max * 9 - 1e-9);
   g.fillStyle = '#0b031c'; g.fillRect(0, 0, 64, 64);
-  const r = seeded(7); for (let i = 0; i < 26; i++) px(g, i % 3 ? '#2a1d52' : '#5e4d85', Math.floor(r() * 64), Math.floor(r() * 50));  // stars
-  px(g, '#2b2468', 0, 56, 64, 8); px(g, '#3a2a6e', 0, 56, 64, 1);
+  const r = seeded(7); for (let i = 0; i < 26; i++) px(g, i % 3 ? '#2a1d52' : '#5e4d85', Math.floor(r() * 64), Math.floor(r() * 50));  // étoiles
+  for (const [dx, dy, w] of [[1, 0, 4], [0, 1, 6], [0, 2, 6], [0, 3, 6], [0, 4, 6], [1, 5, 4]]) px(g, '#e8e0ff', 48 + dx, 5 + dy, w, 1); for (const [dx, dy, w] of [[3, 0, 3], [3, 1, 4], [4, 2, 3], [4, 3, 3], [3, 4, 4], [3, 5, 3]]) px(g, '#0b031c', 48 + dx, 5 + dy, w, 1);  // le croissant de lune
+  px(g, '#2b2468', 0, 56, 64, 8); px(g, '#3a2a6e', 0, 56, 64, 1); for (let x = 2; x < 64; x += 7) px(g, '#3e7a3a', x, 55, 1, 1);
   const wood = '#b8641c', dark = '#7a3c10', skin = hg.done === 'won' ? '#8ee8a0' : '#d9c6ff';
   if (k >= 1) { px(g, dark, 6, 53, 26, 3); px(g, wood, 6, 53, 26, 1); }
   if (k >= 2) { px(g, dark, 12, 8, 4, 45); px(g, wood, 12, 8, 1, 45); }
@@ -138,27 +127,78 @@ function hgDraw() {  // 64 x 64 pixels; the drawing advances with the share of e
   if (k >= 7) for (let i = 0; i < 6; i++) { px(g, skin, x - 2 - i, y + 11 + i); px(g, skin, x + 2 + i, y + 11 + i); }
   if (k >= 8) for (let i = 0; i < 8; i++) px(g, skin, x - 1 - Math.floor(i / 2), y + 21 + i);
   if (k >= 9) for (let i = 0; i < 8; i++) px(g, skin, x + 1 + Math.floor(i / 2), y + 21 + i);
+  return k;
+}
+// un cadre en pixels : contour sombre, liseré clair en haut à gauche, ombre en bas à droite
+function hgFrame(g, x, y, w, h, fill, hi, lo) { px(g, '#05010b', x, y, w, h); px(g, lo, x + 1, y + 1, w - 2, h - 2); px(g, hi, x + 1, y + 1, w - 3, h - 3); px(g, fill, x + 2, y + 2, w - 4, h - 4); }
+function hgText(g, text, x, y, color, align = 'left') { g.font = HG.F; g.textAlign = align; g.textBaseline = 'top'; g.fillStyle = '#05010b'; g.fillText(text, x + 1, y + 1); g.fillStyle = color; g.fillText(text, x, y); }
+// le mot en lignes de 11 cases au plus : coupé aux espaces, un mot trop long est coupé en morceaux
+function hgLines(word, max = 11) {
+  const out = []; let cur = [];
+  const parts = [...word].reduce((a, ch, i) => { if (ch === ' ') a.push([]); else a[a.length - 1].push(i); return a; }, [[]]).filter(w => w.length);
+  for (let w of parts) {
+    while (w.length > max) { if (cur.length) out.push(cur), cur = []; out.push(w.slice(0, max)); w = w.slice(max); }
+    if (cur.length && cur.length + 1 + w.length > max) out.push(cur), cur = [];
+    cur = cur.length ? [...cur, -1, ...w] : w;
+  }
+  if (cur.length) out.push(cur);
+  return out;
+}
+console.assert(hgLines('pomme de terre').map(l => l.length).join() === '8,5' && hgLines('anticonstitutionnellement').length === 3, 'hgLines');
+const HG_ROWS = ['AZERTYUIOP', 'QSDFGHJKLM', 'WXCVBN'];
+function hgKeys() { const out = []; HG_ROWS.forEach((row, j) => { const w = 28, gap = 3, x0 = Math.round((HG.W - (row.length * w + (row.length - 1) * gap)) / 2); [...row].forEach((c, i) => out.push({c, x: x0 + i * (w + gap), y: 160 + j * 25, w, h: 22})); }); return out; }
+function hgDraw() {
+  const cv = $('hgCanvas'), g = cv.getContext('2d'), {W, H} = HG, st = gstore('hang', {won: 0, lost: 0, streak: 0}), show = hg.done === 'lost';
+  g.imageSmoothingEnabled = false;
+  px(g, '#0b031c', 0, 0, W, H); const r = seeded(3); for (let i = 0; i < 60; i++) px(g, i % 4 ? '#1e1448' : '#3a2e6a', Math.floor(r() * W), Math.floor(r() * H));
+  // en haut : le thème et les erreurs (une case par erreur permise)
+  hgText(g, hg.theme, 8, 6, '#c8b8ff');
+  for (let i = 0; i < hg.lv.max; i++) { const x = W - 8 - (hg.lv.max - i) * 9; px(g, '#05010b', x, 5, 8, 9); px(g, i < hg.wrong ? '#ff4f6d' : '#2e2a5a', x + 1, 6, 6, 7); if (i < hg.wrong) px(g, '#ffb0c0', x + 1, 6, 6, 1); }
+  // la potence
+  hgFrame(g, 6, 18, 136, 136, '#0b031c', '#5a46a0', '#1a1238'); const k = hgGallows(); g.drawImage(hgScene, 10, 22, 128, 128);
+  if (hg.flash > 0 && hg.flash % 2) { g.fillStyle = 'rgba(255,79,109,.25)'; g.fillRect(10, 22, 128, 128); }
+  // le mot, en cases
+  hgFrame(g, 148, 18, 166, 136, '#140c30', '#3e2a78', '#0e0820');
+  const lines = hgLines(hg.word), top = 30 + Math.max(0, (3 - lines.length) * 11);
+  lines.slice(0, 4).forEach((ln, j) => {
+    const x0 = 148 + Math.round((166 - ln.length * 14) / 2) + 1, y = top + j * 22;
+    ln.forEach((i, n) => {
+      if (i < 0) return; const ch = hg.word[i], p = hg.plain[i], x = x0 + n * 14;
+      if (!/[A-Z]/.test(p)) { hgText(g, ch, x + 2, y + 3, '#c8b8ff'); return; }
+      const got = hg.guessed.has(p); px(g, got ? '#ff4fa8' : show ? '#ff4f6d' : '#5a46a0', x, y + 13, 12, 2);
+      if (got || show) hgText(g, ch.toUpperCase(), x + 2, y + 3, got ? '#ffffff' : '#ff4f6d');
+    });
+  });
+  const msg = hg.done === 'won' ? ['BRAVO !', '#8ee8a0', 'Série de ' + st.streak] : hg.done === 'lost' ? ['PERDU…', '#ff4f6d', 'Le mot est dévoilé'] : null;
+  if (msg) { hgText(g, msg[0], 231, 104, msg[1], 'center'); hgText(g, msg[2], 231, 118, '#e8e0ff', 'center'); hgText(g, 'Entrée : suivant', 231, 136, '#8f7bb8', 'center'); }
+  else hgText(g, hg.lv.max - hg.wrong + (hg.lv.max - hg.wrong > 1 ? ' essais' : ' essai'), 231, 136, hg.lv.max - hg.wrong <= 2 ? '#ffd07a' : '#8f7bb8', 'center');
+  // le clavier dessiné : touches en relief, vertes si justes, rouges et barrées si fausses
+  hg.keys = hgKeys();
+  for (const K of hg.keys) {
+    const used = hg.guessed.has(K.c), good = used && hg.plain.includes(K.c), hov = !used && !hg.done && hg.hover === K.c, down = hov && hg.press;
+    const [fill, hi, lo, col] = good ? ['#1d4a34', '#2fbf71', '#0e2a1c', '#8ee8a0'] : used ? ['#2a0b1a', '#5a1f36', '#14040c', '#ff4f6d'] : hov ? ['#3e2a78', '#7a64c0', '#1a1238', '#ffffff'] : ['#2e1e5a', '#5a46a0', '#0e0820', hg.done ? '#8f7bb8' : '#ffffff'];
+    hgFrame(g, K.x, K.y + (down ? 1 : 0), K.w, K.h - (down ? 1 : 0), fill, hi, lo);
+    hgText(g, K.c, K.x + K.w / 2, K.y + 7 + (down ? 1 : 0), col, 'center');
+    if (used && !good) for (let i = 0; i < 12; i++) px(g, '#ff4f6d', K.x + 8 + i, K.y + 5 + i, 1, 1);
+  }
+  cv.setAttribute('aria-label', 'Pendu, thème ' + hg.theme + ' : ' + [...hg.plain].map((p, i) => /[A-Z]/.test(p) ? (hg.guessed.has(p) || show ? hg.word[i] : '_') : hg.word[i]).join(' ') + ', erreurs ' + hg.wrong + ' sur ' + hg.lv.max + (hg.done === 'won' ? ', gagné' : hg.done === 'lost' ? ', perdu' : ''));
+  return k;
 }
 function hgRender() {
-  const st = gstore('hang', {won: 0, lost: 0, streak: 0}), show = hg.done === 'lost';
-  $('hgWord').replaceChildren(...[...hg.word].map((ch, i) => {
-    const p = hg.plain[i];
-    if (!/[A-Z]/.test(p)) return el('span', 'sep', ch === ' ' ? ' ' : ch);
-    return el('span', hg.guessed.has(p) ? 'on' : show ? 'miss' : '', hg.guessed.has(p) || show ? ch.toUpperCase() : ' ');
-  }));
-  $('hgThemeName').textContent = 'Thème : ' + hg.theme;
-  $('hgLives').textContent = 'Erreurs : ' + hg.wrong + ' / ' + hg.lv.max;
-  $('hgMsg').textContent = hg.done === 'won' ? 'Bravo ! Série de ' + st.streak : hg.done === 'lost' ? 'Perdu… le mot était « ' + hg.word + ' »' : '';
-  $('hgMsg').className = 'hgMsg ' + (hg.done || '');
+  const st = gstore('hang', {won: 0, lost: 0, streak: 0});
   $('hgInfo').textContent = st.won + ' gagnés · ' + st.lost + ' perdus · série ' + st.streak + ' · meilleure série ' + (games.best.hangStreak ?? 0);
-  $('hgKeys').replaceChildren(...['AZERTYUIOP', 'QSDFGHJKLM', 'WXCVBN'].map(row => {
-    const r = el('div', 'hgRow');
-    for (const c of row) { const b = el('button', 'hgKey px' + (hg.guessed.has(c) ? (hg.plain.includes(c) ? ' good' : ' bad') : ''), c); b.disabled = hg.guessed.has(c) || !!hg.done; b.onclick = () => hgGuess(c); r.append(b); }
-    return r;
-  }));
   $('hgHint').disabled = !!hg.done || hg.wrong >= hg.lv.max - 1;
   hgDraw();
 }
+{ const cv = $('hgCanvas'), at = e => { const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * HG.W, y = (e.clientY - r.top) / r.height * HG.H; return (hg?.keys || []).find(K => x >= K.x && x < K.x + K.w && y >= K.y && y < K.y + K.h); };
+  cv.onpointermove = e => { const K = at(e), c = K && !hg.guessed.has(K.c) && !hg.done ? K.c : null; if (hg && c !== hg.hover) { hg.hover = c; hgDraw(); } };
+  cv.onpointerleave = () => { if (hg) { hg.hover = null; hg.press = false; hgDraw(); } };
+  cv.onpointerdown = e => { e.preventDefault(); if (!hg) return; if (hg.done) return hgNew(); const K = at(e); if (K) { hg.press = true; hgDraw(); } };
+  cv.onpointerup = e => { if (!hg) return; const K = at(e); hg.press = false; if (K) hgGuess(K.c); else hgDraw(); };
+  cv.__hg = {st: () => hg, guess: c => hgGuess(c), keys: () => hgKeys()};
+  document.fonts?.load(HG.F).then(() => hg && hgDraw()).catch(() => {});
+}
+$('hgFs').onclick = () => { $('hgFs').blur(); try { document.fullscreenElement ? document.exitFullscreen() : $('hgCanvas').parentElement.requestFullscreen?.().catch(() => {}); } catch {} };
 $('hgNew').onclick = hgNew;
 $('hgLevel').onchange = $('hgTheme').onchange = hgNew;
 $('hgHint').onclick = () => { if (hg.done || hg.wrong >= hg.lv.max - 1) return; hg.wrong++; hgGuess(anyOf(hgMissing())); };  // a letter of the word, for one error
