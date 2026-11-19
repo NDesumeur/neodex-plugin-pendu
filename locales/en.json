@@ -37,7 +37,6 @@
  "QSDFGHJKLM": "QSDFGHJKLM",
  "Sciences et espace": "Science and space",
  "Sports": "Sports",
- "Statistiques.": "Statistics.",
  "Série de ": "Streak of ",
  "Thème :": "Theme:",
  "Tous les thèmes": "All themes",
@@ -64,5 +63,6 @@
  "pomme de terre": "potato",
  "Série de": "Streak of",
  "Pendu, thème": "Hangman, theme",
- ", gagné": ", won"
+ ", gagné": ", won",
+ "Rien n'est synchronisé : tes records restent sur cet appareil.": "Nothing is synced: your records stay on this device."
 }
