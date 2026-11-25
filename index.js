@@ -30,6 +30,9 @@ export default async function (ctx) {
   const saveGames = () => { clearTimeout(gamesTimer); gamesTimer = setTimeout(() => { gamesTimer = null; folder.write('games', games).catch(() => {}); }, 500); };
   const best = (k, v, higher = true) => { const b = games.best[k]; if (b == null || (higher ? v > b : v < b)) { games.best[k] = v; saveGames(); return true; } return false; };
   const gstore = (k, init) => (games[k] ??= init);  // la section d'un jeu
+  // les trophées de NeoDex (3.4.8 et plus) : succès et records déclarés dans plugin.json ; sur un NeoDex plus ancien, rien ne se passe
+  const trophy = id => { ctx.games?.unlock(id).catch(() => {}); };
+  const trophyRecord = (id, v) => { if (v != null && Number.isFinite(+v)) ctx.games?.record(id, +v).catch(() => {}); };
 function gameLoop(st, appKey, update, draw) {
   cancelAnimationFrame(st.raf);
   const STEP = 1000 / 60; let acc = 0, last = performance.now();
@@ -104,7 +107,7 @@ function hgGuess(c) {
   hg.guessed.add(c);
   if (!hg.plain.includes(c)) { hg.wrong++; sfx('error'); hg.flash = 6; const blink = () => { if (hg.flash > 0) { hg.flash--; hgDraw(); setTimeout(blink, 70); } }; setTimeout(blink, 70); } else sfx('click');
   const st = gstore('hang', {won: 0, lost: 0, streak: 0});
-  if (!hgMissing().length) { hg.done = 'won'; st.won++; st.streak++; best('hangStreak', st.streak); saveGames(); sfx('notify'); }
+  if (!hgMissing().length) { hg.done = 'won'; st.won++; st.streak++; best('hangStreak', st.streak); st.f ??= {}; if (!hg.wrong) st.f.parfait = 1; if (hg.lv.max - hg.wrong === 1) st.f.fil = 1; if (hg.lv === HG_LEVELS.difficile) st.f.difficile = 1; if (hg.lv === HG_LEVELS.expert) st.f.expert = 1; saveGames(); sfx('notify'); hgTrophies(); }
   else if (hg.wrong >= hg.lv.max) { hg.done = 'lost'; st.lost++; st.streak = 0; saveGames(); }
   hgRender();
 }
@@ -209,5 +212,13 @@ document.addEventListener('keydown', e => {
   const c = wordPlain(e.key); if (/^[A-Z]$/.test(c)) hgGuess(c);
 });  // (non indenté : les textes sur plusieurs lignes restent exactement les tiens)
   // ---- fin ----
-  ctx.onOpen(() => { hg ? hgRender() : hgNew(); });
+  // les trophées, tirés des statistiques et des records gardés (aussi à l'ouverture : ce qui a été fait avant compte)
+  function hgTrophies() {
+    const st = games.hang || {}, f = st.f || {}, w = st.won || 0, s = games.best.hangStreak || 0;
+    trophyRecord('serie', s || null); trophyRecord('trouves', w || null);
+    if (w >= 1) trophy('premier'); if (w >= 10) trophy('dix'); if (w >= 100) trophy('cent');
+    if (s >= 5) trophy('serie5'); if (s >= 15) trophy('serie15');
+    if (f.parfait) trophy('parfait'); if (f.fil) trophy('fil'); if (f.difficile || f.expert) trophy('difficile'); if (f.expert) trophy('expert');
+  }
+  ctx.onOpen(() => { hg ? hgRender() : hgNew(); hgTrophies(); });
 }
